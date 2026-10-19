@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageStat
@@ -12,6 +13,15 @@ _FONT = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
 _SPACE_NOTE = (
     "Leave the lower fifth of the frame empty. Do not paint letters, numbers, or writing."
 )
+# Naming the character again for every prop made the model paint a second copy.
+_ONCE = (
+    "Exactly one person, shown once, in a single setting. "
+    "Do not draw a second copy, a twin, a split screen, side-by-side panels, or a turnaround."
+)
+_SETTING = re.compile(
+    r"\b(room|study|landscape|scenery|filled with|background|street|square)\b",
+    re.IGNORECASE,
+)
 
 
 def image_is_static(path: Path) -> bool:
@@ -21,8 +31,25 @@ def image_is_static(path: Path) -> bool:
     return sum(ImageStat.Stat(edges).mean) / 3 > 70
 
 
+def single_character(prompt: str) -> str:
+    """Keep identity cues, and drop the lines that were painting the person twice."""
+    prompt = re.sub(r"Keep one consistent .+?when it returns\.\s*", "", prompt, count=1)
+
+    def _anchors(match: re.Match[str]) -> str:
+        parts = [part.strip() for part in match.group(1).split(",") if part.strip()]
+        kept = [part for part in parts if not _SETTING.search(part)][:4]
+        if not kept:
+            return ""
+        return "Character anchors: " + ", ".join(kept) + ". "
+
+    prompt = re.sub(r"Character anchors: ([^.]+)\.\s*", _anchors, prompt, count=1)
+    if _ONCE not in prompt:
+        prompt = f"{_ONCE} {prompt}"
+    return prompt
+
+
 def image_prompt(shot: Shot) -> str:
-    prompt = shot.visual_prompt.strip()
+    prompt = single_character(shot.visual_prompt.strip())
     if shot.overlay_text.strip() and _SPACE_NOTE not in prompt:
         prompt = f"{prompt} {_SPACE_NOTE}"
     return prompt

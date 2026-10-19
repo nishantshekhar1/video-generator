@@ -192,6 +192,9 @@ def _plan_one_scene(
                     "role": "system",
                     "content": (
                         "You choose one illustration for a stretch of narration. "
+                        "Show one character, once, doing one action in one place. "
+                        "Do not describe a second copy, a before-and-after pair, or two panels. "
+                        "If the words cover more than one moment, pick the single clearest moment. "
                         "The picture must show the objects and action the words name. "
                         "If the words mention lipstick, coffee, a receipt, or a shop, those are in the frame. "
                         "Do not invent a different subject. "
@@ -243,7 +246,7 @@ def run_storyboard(store: RunStore, settings: Settings, llm: OllamaLLM) -> Story
 
     preset = brief.style_preset or "sketch"
     style_prefix = _style_prefix(settings, preset)
-    continuity, sync_line = _continuity(preset, brief.topic)
+    _, sync_line = _continuity(preset, brief.topic)
 
     density = str(store.status().meta.get("still_density") or "standard")
     min_hold, max_hold = _hold_bounds(density)
@@ -263,7 +266,7 @@ def run_storyboard(store: RunStore, settings: Settings, llm: OllamaLLM) -> Story
         )
         duration = round(sum(dur_map.get(s.id, 2.0) for s in sentences), 3)
         prompt = (
-            f"{style_prefix}. {continuity} "
+            f"{style_prefix}. "
             f"Scene: {scene}. "
             f"{sync_line}: {spoken}"
         )

@@ -58,7 +58,9 @@ class OllamaVision:
             "(3) garbled letters painted into the scene are a failure. "
             "A clean typeset caption in the lower band is intentional and is OK, "
             "(4) if a character sheet was provided, the face, outfit, and body width must match it. "
-            "A torso or hips that look clearly thinner or heavier than the sheet is a failure.\n"
+            "A torso or hips that look clearly thinner or heavier than the sheet is a failure. "
+            "(5) the guide character appears once. A second copy, a twin, a split screen, "
+            "or two panels of the same person is a failure.\n"
             "Respond ONLY as JSON: "
             '{"ok": true|false, "reasons": "...", "retry_prompt": "improved image prompt or empty"}'
         )

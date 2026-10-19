@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from videogen.config import Settings
 from videogen.models import CharacterBible, Storyboard
@@ -16,6 +17,10 @@ log = logging.getLogger(__name__)
 _BODY_RULE = (
     "Same torso width, hip width, and limb thickness in every frame. "
     "Do not redraw the character thinner or heavier."
+)
+_PLACE = re.compile(
+    r"\b(room|study|landscape|scenery|filled with|background|street|square)\b",
+    re.IGNORECASE,
 )
 
 
@@ -53,7 +58,14 @@ def _fallback_bible(topic: str, style_prefix: str) -> CharacterBible:
     )
 
 
+def _identity_anchors(anchors: str) -> str:
+    parts = [part.strip() for part in anchors.split(",") if part.strip()]
+    kept = [part for part in parts if not _PLACE.search(part)]
+    return ", ".join(kept[:4])
+
+
 def _apply_anchors(prompt: str, anchors: str, body: str) -> str:
+    anchors = _identity_anchors(anchors)
     if anchors and "Character anchors:" not in prompt:
         needle = "Scene:"
         line = f"Character anchors: {anchors}."
@@ -97,7 +109,8 @@ def run_bible(
                         '"anchors":["5 to 7 short visual anchors"],'
                         '"style_prompt":"empty style-plate prompt"}. '
                         "Pick one body and keep it. Do not say slim in one place and plump in another. "
-                        "Anchors cover hair, palette, outfit, and prop. "
+                        "Anchors cover hair, face, outfit, and one prop. "
+                        "Do not put a room, a landscape, or a list of extra objects in the anchors. "
                         "No readable text, logos, or photorealism."
                     ),
                 },
