@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Local Video Studio</title>
+  <style>
+    :root {
+      --bg: #0f1218;
+      --panel: #1a2030;
+      --text: #e8eefc;
+      --muted: #9aa8c7;
+      --accent: #7aa2ff;
+      --ok: #5ddea0;
+      --bad: #ff7a90;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: "IBM Plex Sans", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #243056, transparent), var(--bg);
+      color: var(--text); min-height: 100vh;
+    }
+    main { max-width: 920px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    h1 { font-weight: 650; letter-spacing: -0.02em; margin: 0 0 0.25rem; }
+    .sub { color: var(--muted); margin-bottom: 1.5rem; }
+    .panel {
+      background: color-mix(in srgb, var(--panel) 92%, black);
+      border: 1px solid #2c3650; border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin: 0.75rem 0 0.35rem; }
+    input, select, textarea {
+      width: 100%; background: #0d111a; color: var(--text);
+      border: 1px solid #334062; border-radius: 10px; padding: 0.7rem 0.8rem; font: inherit;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+    button {
+      margin-top: 1rem; background: var(--accent); color: #081018; border: 0;
+      border-radius: 999px; padding: 0.75rem 1.2rem; font-weight: 700; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    .stages { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+    .chip {
+      font-size: 0.75rem; padding: 0.3rem 0.55rem; border-radius: 999px;
+      border: 1px solid #334062; color: var(--muted);
+    }
+    .chip.done { border-color: var(--ok); color: var(--ok); }
+    .chip.running { border-color: var(--accent); color: var(--accent); }
+    .chip.failed, .chip.stopped { border-color: var(--bad); color: var(--bad); }
+    video { width: 100%; border-radius: 12px; background: #000; margin-top: 0.75rem; }
+    .shot { margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid #2c3650; }
+    .spoken { font-size: 1.05rem; margin: 0.45rem 0 0.2rem; line-height: 1.35; }
+    .shot img { width: 100%; border-radius: 8px; background: #000; display: block; }
+    .shotbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;
+    }
+    .shotbar button { margin-top: 0; }
+    .shotbar label { margin: 0; display: flex; align-items: center; gap: 0.4rem; }
+    .shotbar select, .shotbar input { width: auto; }
+    .runline { display: flex; align-items: center; gap: 0.6rem; margin: 0.35rem 0; }
+    .runline button {
+      margin-top: 0; padding: 0.25rem 0.7rem; background: transparent;
+      color: var(--bad); border: 1px solid var(--bad);
+    }
+    .err { color: var(--bad); white-space: pre-wrap; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Local Video Studio</h1>
+    <p class="sub">Research → script → local Flux stills → narration → assemble. LLM/VLM via Ollama only.</p>
+
+    <section class="panel">
+      <div id="health">Checking services…</div>
+    </section>
+
+    <section class="panel">
+      <label for="topic">Topic</label>
+      <textarea id="topic" placeholder="e.g. Why octopus arms can taste what they touch"></textarea>
+      <div class="row">
+        <div>
+          <label for="duration">Duration (seconds)</label>
+          <input id="duration" type="number" value="45" min="20" max="360" />
+        </div>
+        <div>
+          <label for="style">Style</label>
+          <select id="style">
+            <option value="sketch" selected>Toddler color-pencil cartoon</option>
+            <option value="classic_cartoon">Classic cartoon (vintage cel)</option>
+            <option value="storybook">Storybook illustration</option>
+            <option value="retro_digital">Retro Digital (pixel / synthwave)</option>
+            <option value="painterly">Painterly</option>
+            <option value="graphic">Graphic</option>
+          </select>
+        </div>
+        <div>
+          <label><input type="checkbox" id="pick" /> Pick a topic for me</label>
+          <label><input type="checkbox" id="skipqa" /> Skip vision QA</label>
+          <label><input type="checkbox" id="review" checked /> Pause after draft frames</label>
+          <label><input type="checkbox" id="motion" checked /> Motion</label>
+          <label for="density">Stills</label>
+          <select id="density">
+            <option value="fewer">Fewer</option>
+            <option value="standard" selected>Standard</option>
+            <option value="more">More</option>
+          </select>
+        </div>
+      </div>
+      <button id="start">Generate video</button>
+    </section>
+
+    <section class="panel" id="statusPanel" hidden>
+      <div class="runline">Run: <code id="runId"></code> — <span id="jobState"></span>
+        <button id="stop" hidden type="button">Stop</button>
+      </div>
+      <div class="stages" id="stages"></div>
+      <p class="err" id="err"></p>
+      <div id="shotPanel" hidden>
+        <div class="shotbar">
+          <button id="shotToggle" type="button" aria-expanded="true">Hide stills and voiceover</button>
+          <label><input type="checkbox" id="runMotion" checked /> Motion</label>
+          <label>Stills
+            <select id="runDensity">
+              <option value="fewer">Fewer</option>
+              <option value="standard">Standard</option>
+              <option value="more">More</option>
+            </select>
+          </label>
+          <button id="applyDensity" type="button">Apply still count</button>
+          <button id="rebuild" hidden type="button">Rebuild video from these stills</button>
+        </div>
+        <p class="sub" id="shotNote"></p>
+        <div id="drafts"></div>
+      </div>
+      <button id="approve" hidden type="button">Approve drafts and render finals</button>
+      <video id="player" controls hidden></video>
+      <p><a id="download" hidden href="#">Download MP4</a></p>
+    </section>
+
+    <section class="panel">
+      <h3 style="margin-top:0">Recent runs</h3>
+      <div id="recent"></div>
+    </section>
+  </main>
+  <script>
+    const STAGE_ORDER = ["topic","research","script","narration","storyboard","bible","stills","qa","motion","assemble"];
+    let pollTimer = null;
+
+    async function refreshHealth() {
+      const h = await fetch("/api/health").then(r => r.json());
+      const el = document.getElementById("health");
+      el.innerHTML = Object.entries(h).map(([k,v]) =>
+        `<span class="chip ${v?'done':'failed'}">${k}: ${v?'ok':'down'}</span>`
+      ).join(" ");
+    }
+
+    async function refreshRecent() {
+      const runs = await fetch("/api/runs").then(r => r.json());
+      const host = document.getElementById("recent");
+      host.replaceChildren();
+      if (!runs.length) {
+        const empty = document.createElement("div");
+        empty.className = "sub";
+        empty.textContent = "No runs yet";
+        host.appendChild(empty);
+        return;
+      }
+      for (const run of runs) {
+        const row = document.createElement("div");
+        row.className = "runline";
+        const link = document.createElement("a");
+        link.href = "#";
+        link.textContent = run.run_id;
+        link.onclick = (e) => { e.preventDefault(); watchRun(run.run_id); };
+        const label = document.createElement("span");
+        label.textContent = "— " + (run.topic || "(no topic)") + (run.final_ready ? " ✓" : "");
+        const del = document.createElement("button");
+        del.type = "button";
+        del.textContent = "Delete";
+        del.onclick = () => deleteRun(run.run_id, run.topic);
+        row.append(link, label, del);
+        host.appendChild(row);
+      }
+    }
+
+    async function deleteRun(runId, topic) {
+      const name = topic ? runId + " (" + topic + ")" : runId;
+      if (!confirm("Delete " + name + "? This removes the video and its files.")) return;
+      const res = await fetch("/api/runs/" + runId, { method: "DELETE" });
+      if (!res.ok) { alert(await res.text()); return; }
+      if (document.getElementById("runId").textContent === runId) {
+        if (pollTimer) clearInterval(pollTimer);
+        document.getElementById("statusPanel").hidden = true;
+      }
+      refreshRecent();
+    }
+
+    function renderStages(status) {
+      const stages = status?.stages || {};
+      document.getElementById("stages").innerHTML = STAGE_ORDER.map(s => {
+        const st = stages[s] || "pending";
+        return `<span class="chip ${st}">${s}: ${st}</span>`;
+      }).join("");
+    }
+
+    async function watchRun(runId) {
+      document.getElementById("statusPanel").hidden = false;
+      document.getElementById("runId").textContent = runId;
+      document.getElementById("player").hidden = true;
+      document.getElementById("download").hidden = true;
+      if (pollTimer) clearInterval(pollTimer);
+      const tick = async () => {
+        const data = await fetch(`/api/runs/${runId}`).then(r => r.json());
+        const assembleState = data.status?.stages?.assemble;
+        const jobState = data.job?.state;
+        const stopped = jobState === "stopped" || data.status?.current_stage === "stopped";
+        const finished = !stopped && (jobState === "done" || assembleState === "done" || data.status?.current_stage === "done");
+        document.getElementById("jobState").textContent = stopped
+          ? "stopped"
+          : (finished ? "done" : (jobState || data.status?.current_stage || ""));
+        const waiting = !finished && !stopped && (jobState === "awaiting_approval" || data.status?.meta?.awaiting_approval);
+        const stop = document.getElementById("stop");
+        const active = !finished && !stopped && !waiting && jobState !== "failed" && assembleState !== "failed" && (
+          jobState === "running" || jobState === "queued" || jobState === "stopping"
+          || ["topic","research","script","narration","storyboard","bible","stills","qa","motion","assemble"].includes(data.status?.current_stage)
+        );
+        stop.hidden = !active;
+        stop.disabled = jobState === "stopping";
+        stop.textContent = jobState === "stopping" ? "Stopping…" : "Stop";
+        stop.dataset.run = runId;
+        renderStages(data.status);
+        document.getElementById("err").textContent = data.job?.error || data.status?.error || "";
+        const approve = document.getElementById("approve");
+        approve.hidden = !waiting;
+        approve.dataset.run = runId;
+        const stages = data.status?.stages || {};
+        const showShots = stages.storyboard === "done" && (
+          waiting || assembleState === "failed" || finished || data.status?.meta?.needs_rebuild
+          || stages.stills === "done" || stages.stills === "running"
+        );
+        const panel = document.getElementById("shotPanel");
+        panel.hidden = !showShots;
+        if (showShots) {
+          const motionBox = document.getElementById("runMotion");
+          const density = document.getElementById("runDensity");
+          if (document.activeElement !== motionBox) {
+            motionBox.checked = data.status?.meta?.motion !== false;
+          }
+          if (document.activeElement !== density) {
+            density.value = data.status?.meta?.still_density || "standard";
+          }
+          const rebuild = document.getElementById("rebuild");
+          rebuild.hidden = !(data.status?.meta?.needs_rebuild || assembleState === "failed");
+          rebuild.dataset.run = runId;
+          document.getElementById("shotNote").textContent = data.status?.meta?.needs_rebuild
+            ? "Changes saved. Rebuild the video to apply them."
+            : "";
+          const open = sessionStorage.getItem("shots-open-" + runId) !== "0";
+          setShotsOpen(open);
+          if (open) renderDrafts(runId, data);
+        }
+        if (finished && data.final_ready) {
+          const url = `/api/runs/${runId}/video?t=${Date.now()}`;
+          const player = document.getElementById("player");
+          if (player.hidden) player.src = url;
+          player.hidden = false;
+          const dl = document.getElementById("download");
+          dl.href = url;
+          dl.hidden = false;
+          clearInterval(pollTimer);
+          refreshRecent();
+        }
+        if (jobState === "failed" || jobState === "stopped" || stopped || assembleState === "failed") clearInterval(pollTimer);
+      };
+      await tick();
+      pollTimer = setInterval(tick, 2000);
+    }
+
+    document.getElementById("start").onclick = async () => {
+      const btn = document.getElementById("start");
+      btn.disabled = true;
+      try {
+        const body = {
+          topic: document.getElementById("topic").value.trim() || null,
+          pick_topic: document.getElementById("pick").checked,
+          duration_s: Number(document.getElementById("duration").value),
+          style_preset: document.getElementById("style").value,
+          skip_qa: document.getElementById("skipqa").checked,
+          await_approval: document.getElementById("review").checked,
+          motion: document.getElementById("motion").checked,
+          still_density: document.getElementById("density").value,
+        };
+        const res = await fetch("/api/runs", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        await watchRun(data.run_id);
+      } catch (e) {
+        alert(e.message || e);
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    let draftKey = "";
+
+    function field(labelText, value, multiline) {
+      const label = document.createElement("label");
+      label.textContent = labelText;
+      const input = multiline ? document.createElement("textarea") : document.createElement("input");
+      input.value = value || "";
+      return { label, input };
+    }
+
+    async function renderDrafts(runId, data) {
+      const host = document.getElementById("drafts");
+      if (host.contains(document.activeElement)) return;
+      const board = await fetch(`/api/runs/${runId}/storyboard`).then(r => r.json());
+      const shots = board.shots || [];
+      const key = shots.map(s => [s.id, s.draft_path, s.frame_path, s.narration_text, s.overlay_text, s.visual_prompt].join("|")).join("\n");
+      if (key === draftKey && host.childElementCount) return;
+      draftKey = key;
+      host.replaceChildren();
+      for (const shot of shots) {
+        const card = document.createElement("div");
+        card.className = "shot";
+        const rel = shot.draft_path || shot.frame_path;
+        if (rel) {
+          const img = document.createElement("img");
+          img.alt = shot.id;
+          img.src = `/api/runs/${runId}/asset?rel=${encodeURIComponent(rel)}&v=${encodeURIComponent(key.slice(0, 40))}`;
+          card.appendChild(img);
+        }
+        const meta = document.createElement("div");
+        meta.className = "sub";
+        meta.textContent = `${shot.id} · ${shot.coverage || "shot"}${shot.hero ? " · hero" : ""}`;
+        const spoken = document.createElement("p");
+        spoken.className = "spoken";
+        spoken.textContent = shot.narration_text || "";
+        const line = field("Spoken with this still", shot.narration_text, true);
+        line.input.addEventListener("input", () => { spoken.textContent = line.input.value; });
+        const overlay = field("Words printed on the image", shot.overlay_text, false);
+        overlay.input.placeholder = "Leave empty when the picture needs no words";
+        const prompt = field("Image prompt", shot.visual_prompt, true);
+        const apply = document.createElement("button");
+        apply.type = "button";
+        apply.textContent = "Update still and line";
+        apply.onclick = async () => {
+          apply.disabled = true;
+          apply.textContent = "Updating…";
+          const res = await fetch(`/api/runs/${runId}/shots/${shot.id}`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+              visual_prompt: prompt.input.value,
+              narration_text: line.input.value,
+              overlay_text: overlay.input.value,
+            }),
+          });
+          apply.disabled = false;
+          apply.textContent = "Update still and line";
+          if (!res.ok) { alert(await res.text()); return; }
+          draftKey = "";
+          renderDrafts(runId, data);
+        };
+        card.append(meta, spoken, line.label, line.input, overlay.label, overlay.input, prompt.label, prompt.input, apply);
+        host.appendChild(card);
+      }
+    }
+
+    function setShotsOpen(open) {
+      document.getElementById("drafts").hidden = !open;
+      const toggle = document.getElementById("shotToggle");
+      toggle.textContent = open ? "Hide stills and voiceover" : "Show stills and voiceover";
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    document.getElementById("shotToggle").onclick = () => {
+      const runId = document.getElementById("runId").textContent;
+      const open = document.getElementById("drafts").hidden;
+      sessionStorage.setItem("shots-open-" + runId, open ? "1" : "0");
+      setShotsOpen(open);
+      if (open) {
+        draftKey = "";
+        renderDrafts(runId);
+      }
+    };
+
+    document.getElementById("runMotion").onchange = async () => {
+      const runId = document.getElementById("runId").textContent;
+      const box = document.getElementById("runMotion");
+      const res = await fetch(`/api/runs/${runId}/options`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ motion: box.checked }),
+      });
+      if (!res.ok) alert(await res.text());
+    };
+
+    document.getElementById("applyDensity").onclick = async () => {
+      const runId = document.getElementById("runId").textContent;
+      const density = document.getElementById("runDensity").value;
+      if (!confirm("Redraw the storyboard and stills with this still count?")) return;
+      const btn = document.getElementById("applyDensity");
+      btn.disabled = true;
+      const res = await fetch(`/api/runs/${runId}/options`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          motion: document.getElementById("runMotion").checked,
+          still_density: density,
+          replan: true,
+        }),
+      });
+      btn.disabled = false;
+      if (!res.ok) { alert(await res.text()); return; }
+      draftKey = "";
+      watchRun(runId);
+    };
+
+    document.getElementById("rebuild").onclick = async () => {
+      const btn = document.getElementById("rebuild");
+      const runId = btn.dataset.run;
+      btn.disabled = true;
+      const res = await fetch(`/api/runs/${runId}/resume`, { method: "POST" });
+      btn.disabled = false;
+      if (!res.ok) { alert(await res.text()); return; }
+      draftKey = "";
+      watchRun(runId);
+    };
+
+    document.getElementById("stop").onclick = async () => {
+      const btn = document.getElementById("stop");
+      const runId = btn.dataset.run;
+      btn.disabled = true;
+      btn.textContent = "Stopping…";
+      const res = await fetch(`/api/runs/${runId}/stop`, { method: "POST" });
+      if (!res.ok) {
+        alert(await res.text());
+        btn.disabled = false;
+        btn.textContent = "Stop";
+      }
+    };
+
+    document.getElementById("approve").onclick = async () => {
+      const btn = document.getElementById("approve");
+      const runId = btn.dataset.run;
+      btn.disabled = true;
+      const res = await fetch(`/api/runs/${runId}/approve`, { method: "POST" });
+      if (!res.ok) {
+        alert(await res.text());
+        btn.disabled = false;
+        return;
+      }
+      btn.hidden = true;
+      watchRun(runId);
+    };
+
+    refreshHealth();
+    refreshRecent();
+    setInterval(refreshHealth, 15000);
+  </script>
+</body>
+</html>

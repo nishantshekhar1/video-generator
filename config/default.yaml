@@ -1,0 +1,114 @@
+# Local video studio defaults — all LLM/VLM traffic stays on Ollama.
+
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  writer_model: "gemma4:latest"  # reliable JSON + speed; qwen3.5 for long-form synthesis
+  writer_model_structured: "gemma4:latest"
+  writer_model_prose: "qwen3.5:latest"
+  writer_model_quality: "qwen3.6:35b"
+  vision_model: "qwen3-vl:8b"
+  embed_model: "nomic-embed-text:latest"
+  timeout_s: 1800
+  num_ctx: 8192
+
+comfyui:
+  base_url: "http://127.0.0.1:8188"
+  workflow: "workflows/flux_schnell_api.json"
+  unet_name: "flux1-schnell.safetensors"
+  unet_weight_dtype: "default"
+  clip_name1: "t5xxl_fp8_e4m3fn.safetensors"
+  clip_name2: "clip_l.safetensors"
+  vae_name: "ae.safetensors"
+  steps: 4
+  guidance: 3.5
+  timeout_s: 3600
+  # Finals: Flux Dev fp8 + turbo LoRA. Drafts stay on Schnell (unet_name above).
+  final_unet_name: "flux1-dev-fp8.safetensors"
+  final_lora_name: "fluxdev1-turbo-8steps-lora.safetensors"
+  final_steps: 8
+  final_guidance: 3.5
+  draft_width: 768
+  draft_height: 432
+  width: 1280
+  height: 720
+  redux_model: "flux1-redux-dev.safetensors"
+  clip_vision_name: "sigclip_vision_patch14_384.safetensors"
+  redux_strength: 0.55
+  # Apache stills for a published channel. Flux Dev stays on disk and is unused.
+  zimage_unet: "z_image_turbo_bf16.safetensors"
+  zimage_clip: "qwen_3_4b.safetensors"
+  zimage_vae: "ae.safetensors"
+  zimage_steps: 8
+  zimage_shift: 3.0
+  qwen_unet: "qwen_image_2512_fp8_e4m3fn.safetensors"
+  qwen_edit_unet: "qwen_image_edit_2511_fp8mixed.safetensors"
+  qwen_clip: "qwen_2.5_vl_7b_fp8_scaled.safetensors"
+  qwen_vae: "qwen_image_vae.safetensors"
+  qwen_lora: "Qwen-Image-Lightning-4steps-V1.0-bf16.safetensors"
+  qwen_edit_lora: "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
+  qwen_steps: 4
+  qwen_cfg: 1.0
+  qwen_shift: 3.1
+  wan_high_unet: "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"
+  wan_low_unet: "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"
+  wan_clip: "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+  wan_vae: "split_files/vae/wan_2.1_vae.safetensors"
+  wan_steps: 20
+  wan_cfg: 5.0
+  wan_shift: 5.0
+  wan_width: 1280
+  wan_height: 720
+  wan_high_device: 0
+  wan_low_device: 1
+
+tts:
+  backend: "kokoro_onnx"  # kokoro_onnx | kokoro | espeak | rough
+  voice: "af_heart"
+  sample_rate: 24000
+  lang_code: "a"
+
+pipeline:
+  words_per_minute: 150
+  default_duration_s: 60
+  # Shared constraints; look comes from style_presets (default: sketch).
+  # Visuals can be playful toddler-cartoon; narration stays mature (script stage).
+  style_prefix: "illustrated educational video still, no photorealism, no watermark, no UI chrome, no readable text overlays"
+  style_presets:
+    painterly: "painterly graphic high contrast, bold shapes, cinematic lighting"
+    sketch: "funny hand-drawn cartoon for toddlers by a warm cartoonist, colored pencil and soft crayon on textured cream paper, wobbly charming pencil outlines, gentle watercolor-pencil fills, big expressive eyes, cute simplified shapes, playful exaggeration, cozy storybook page, bright friendly colors, whimsical and silly but clear subject"
+    graphic: "flat graphic poster illustration, bold color blocks, editorial design"
+    retro_digital: "retro digital pixel art, 8-bit and 16-bit video game asset style, chunky visible pixels, limited color palette, crisp sprite silhouettes, synthwave neon aesthetics, magenta and cyan glow, dark grid or sunset gradient backdrop, arcade game key art, no photorealism, no modern UI chrome"
+    classic_cartoon: "classic American theatrical cartoon style, 1930s-1950s rubber-hose animation look, clean ink outlines, flat cel-shaded colors, squash and stretch poses, expressive eyes and gloves-era charm, painted sky backdrop, vintage animation still, whimsical and lively, no photorealism, no 3D CGI, no modern anime"
+    storybook: "children's picture-book illustration, gouache and watercolor on warm cream paper, delicate ink outlines, soft painted color, rich storybook scenery, gentle lighting, narrative picture-book plate, whimsical but grounded characters, no photorealism, no cel animation, no pixel art, no 3D CGI"
+  vision_retry_once: true
+  camera_fps: 24
+  output_width: 1920
+  output_height: 1080
+  video_bitrate: "16M"
+  audio_bitrate: "384k"
+  loudness_i: -14
+  loudness_tp: -1.5
+  loudness_lra: 11
+  burn_captions: false
+  hero_count: 2
+
+research:
+  max_results: 6
+  max_pages: 4
+  max_chars_per_page: 4000
+
+paths:
+  runs_dir: "runs"
+  comfy_output_dir: "/home/nishant/Desktop/ComfyUI/output"
+
+gpu:
+  # Documented intent: Ollama on GPU 1, ComfyUI on GPU 0.
+  ollama_cuda_visible_devices: "1"
+  comfy_cuda_visible_devices: "0"
+
+interests:
+  - "how everyday physics shapes the world"
+  - "hidden stories behind common inventions"
+  - "surprising biology of ordinary animals"
+  - "why cities look the way they do"
+  - "mental models that change how you decide"
