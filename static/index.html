@@ -63,6 +63,35 @@
       margin-top: 0; padding: 0.25rem 0.7rem; background: transparent;
       color: var(--bad); border: 1px solid var(--bad);
     }
+    .runline button.icon-btn {
+      margin-left: auto; width: 2rem; height: 2rem; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--muted); background: transparent; border: 0; border-radius: 8px;
+    }
+    .runline button.icon-btn:hover { color: var(--text); background: #243049; }
+    .runline button.icon-btn svg { width: 1rem; height: 1rem; display: block; }
+    .modal {
+      position: fixed; inset: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(8, 10, 16, 0.62);
+    }
+    .modal[hidden] { display: none; }
+    .modal-card {
+      width: min(420px, calc(100% - 2rem));
+      background: #171c28; border: 1px solid #2c3548; border-radius: 14px;
+      padding: 1.25rem 1.35rem 1.05rem; color: var(--muted);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    }
+    .modal-card h2 { margin: 0 0 0.4rem; font-size: 1.05rem; font-weight: 600; color: #c9d3e6; }
+    .modal-card p { margin: 0; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .modal-actions button {
+      margin-top: 1rem; background: transparent; color: var(--muted);
+      border: 1px solid #3a455c; font-weight: 600; padding: 0.45rem 0.9rem;
+    }
+    .modal-actions button.quiet-danger {
+      color: #c9b4b8; border-color: #4a3d44; background: #241e22;
+    }
     .err { color: var(--bad); white-space: pre-wrap; }
     a { color: var(--accent); }
   </style>
@@ -144,6 +173,16 @@
       <div id="recent"></div>
     </section>
   </main>
+  <div id="confirm" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h2 id="confirmTitle"></h2>
+      <p id="confirmBody"></p>
+      <div class="modal-actions">
+        <button id="confirmCancel" type="button">Cancel</button>
+        <button id="confirmOk" class="quiet-danger" type="button">Delete</button>
+      </div>
+    </div>
+  </div>
   <script>
     const STAGE_ORDER = ["topic","research","script","narration","storyboard","bible","stills","qa","motion","assemble"];
     let pollTimer = null;
@@ -178,18 +217,50 @@
         label.textContent = "— " + (run.topic || "(no topic)") + (run.final_ready ? " ✓" : "");
         const del = document.createElement("button");
         del.type = "button";
-        del.textContent = "Delete";
+        del.className = "icon-btn";
+        del.setAttribute("aria-label", "Delete " + (run.topic || run.run_id));
+        del.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M8 7l1 12h6l1-12"/></svg>';
         del.onclick = () => deleteRun(run.run_id, run.topic);
         row.append(link, label, del);
         host.appendChild(row);
       }
     }
 
+    function askConfirm(title, body, okLabel) {
+      const modal = document.getElementById("confirm");
+      document.getElementById("confirmTitle").textContent = title;
+      document.getElementById("confirmBody").textContent = body;
+      const ok = document.getElementById("confirmOk");
+      const cancel = document.getElementById("confirmCancel");
+      ok.textContent = okLabel;
+      modal.hidden = false;
+      cancel.focus();
+      return new Promise((resolve) => {
+        const finish = (value) => {
+          modal.hidden = true;
+          ok.onclick = null;
+          cancel.onclick = null;
+          modal.onclick = null;
+          document.removeEventListener("keydown", onKey);
+          resolve(value);
+        };
+        const onKey = (e) => { if (e.key === "Escape") finish(false); };
+        ok.onclick = () => finish(true);
+        cancel.onclick = () => finish(false);
+        modal.onclick = (e) => { if (e.target === modal) finish(false); };
+        document.addEventListener("keydown", onKey);
+      });
+    }
+
     async function deleteRun(runId, topic) {
       const name = topic ? runId + " (" + topic + ")" : runId;
-      if (!confirm("Delete " + name + "? This removes the video and its files.")) return;
+      const ok = await askConfirm("Delete this run?", name + " and its files will be removed.", "Delete");
+      if (!ok) return;
       const res = await fetch("/api/runs/" + runId, { method: "DELETE" });
-      if (!res.ok) { alert(await res.text()); return; }
+      if (!res.ok) {
+        await askConfirm("Could not delete this run", await res.text(), "OK");
+        return;
+      }
       if (document.getElementById("runId").textContent === runId) {
         if (pollTimer) clearInterval(pollTimer);
         document.getElementById("statusPanel").hidden = true;
