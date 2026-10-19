@@ -483,6 +483,11 @@ class ComfyClient:
             if image_is_static(path):
                 path.unlink(missing_ok=True)
                 raise RuntimeError("image model returned static")
+            from videogen.overlay import collapse_diptych
+
+            sheet = "side by side" in prompt.lower() or "two full-body" in prompt.lower()
+            if not sheet and collapse_diptych(path):
+                log.warning("Collapsed a duplicated panel in %s", path.name)
             return path
 
         def schnell(prefix: str) -> Path:

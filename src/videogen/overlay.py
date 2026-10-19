@@ -13,15 +13,60 @@ _FONT = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
 _SPACE_NOTE = (
     "Leave the lower fifth of the frame empty. Do not paint letters, numbers, or writing."
 )
-# Naming the character again for every prop made the model paint a second copy.
+# A wide frame was being painted as two copies of the same page.
 _ONCE = (
-    "Exactly one person, shown once, in a single setting. "
-    "Do not draw a second copy, a twin, a split screen, side-by-side panels, or a turnaround."
+    "One children's picture-book page filling the whole frame. "
+    "One scene only. Not a diptych, not a two-page spread, not a second copy of the same picture."
 )
 _SETTING = re.compile(
     r"\b(room|study|landscape|scenery|filled with|background|street|square)\b",
     re.IGNORECASE,
 )
+
+
+def collapse_diptych(path: Path) -> bool:
+    """Keep one half when the two sides are copies of the same picture.
+
+    A front-and-side character sheet is a mirror pair, not a copy, so it stays.
+    Two different people in one shop stay as well.
+    """
+    import numpy as np
+
+    image = Image.open(path).convert("RGB")
+    width, height = image.size
+    if width < int(height * 1.3):
+        return False
+    left_im = image.crop((0, 0, width // 2, height))
+    right_im = image.crop((width // 2, 0, width, height))
+    left = np.asarray(left_im.resize((32, 32)), dtype=np.float32).reshape(-1)
+    right = np.asarray(right_im.resize((32, 32)), dtype=np.float32).reshape(-1)
+    mirror = np.asarray(
+        right_im.transpose(Image.Transpose.FLIP_LEFT_RIGHT).resize((32, 32)),
+        dtype=np.float32,
+    ).reshape(-1)
+
+    def _corr(a: np.ndarray, b: np.ndarray) -> float:
+        if float(a.std()) < 1 or float(b.std()) < 1:
+            return 0.0
+        return float(np.corrcoef(a, b)[0, 1])
+
+    copied = _corr(left, right)
+    mirrored = _corr(left, mirror)
+    if not (copied > 0.42 and copied > mirrored + 0.05):
+        return False
+    pixels = np.asarray(image, dtype=np.float32)
+    dark = pixels.mean(axis=(0, 2))
+    jump = np.abs(pixels[:, 1:] - pixels[:, :-1]).mean(axis=(0, 2))
+    lo, hi = int(width * 0.40), int(width * 0.58)
+    dark_cols = np.where(dark[lo:hi] < 30)[0]
+    if len(dark_cols):
+        cut = lo + int(dark_cols[0])
+    else:
+        cut = lo + int(jump[lo:hi].argmax())
+    cut = max(width // 3, min(cut, width // 2))
+    page = image.crop((0, 0, cut, height)).resize((width, height), Image.Resampling.LANCZOS)
+    page.save(path)
+    return True
 
 
 def image_is_static(path: Path) -> bool:
