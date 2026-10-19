@@ -125,6 +125,7 @@ def _plan_visual_hints(
                         "AUDIO/narration is mature and factual; visuals follow the art brief. "
                         f"{style_sys} "
                         "For each narration line, write a CONCRETE visual scene of what that line is about. "
+                        "Show one character, once, in one place. "
                         "The objects and actions named in the line must be in the picture. "
                         "If the line mentions lipstick, coffee, a shop, or a person doing something, show that, "
                         "not a different metaphor. "

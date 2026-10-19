@@ -25,7 +25,7 @@ Never load `qwen3.6:35b` and Flux on the same card at once. Stages are sequentia
 topic → research → script → narration → storyboard → bible → stills → qa → motion → assemble
 ```
 
-The character sheet is a full-body front-and-side proportion plate. Every shot starts with that same body sentence, and finals are edited from the plate so the torso width cannot drift while the clothes stay put.
+The character sheet is a full-body front-and-side proportion plate. Every shot starts with that same body sentence, and finals are edited from the plate so the torso width cannot drift while the clothes stay put. A shot names that person once and names one place. Rooms and extra props stay off the shot prompt, because listing them made the image model paint a second copy of the character.
 
 On-image words are not painted by Flux. When a shot needs a sign, label, or title, `overlay_text` is typeset with DejaVu Sans after the still. The review screen shows the spoken line under each frame and can rewrite that line, the overlay, and the image prompt, then regenerate the still and the sentence audio.
 
