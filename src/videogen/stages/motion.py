@@ -264,12 +264,14 @@ def run_motion(
         dest = store.path("clips", f"{shot.id}.mp4")
         if dest.exists() and dest.stat().st_size > 1000:
             shot.clip_path = str(dest.relative_to(store.root))
+            store.write_json("storyboard.json", board)
             continue
         frame = store.path(shot.frame_path)
         if not motion_on:
             log.info("Still hold %s", shot.id)
             _hold_still(frame, dest, shot, settings)
             shot.clip_path = str(dest.relative_to(store.root))
+            store.write_json("storyboard.json", board)
             continue
         made_hero = False
         if shot.hero and shot.duration_s >= 1.8 and comfy is not None:
@@ -317,5 +319,6 @@ def run_motion(
             log.info("Camera move %s (%s)", shot.id, shot.camera)
             _ken_burns(frame, dest, shot, settings)
         shot.clip_path = str(dest.relative_to(store.root))
+        store.write_json("storyboard.json", board)
     store.write_json("storyboard.json", board)
     return board

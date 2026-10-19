@@ -52,7 +52,7 @@ class OllamaVision:
             f"{identity}"
             "Check: (1) subject clearly matches the expected scene (not unrelated imagery), "
             "(2) style coherence with the notes (e.g. toddler colored-pencil, classic "
-            "cel cartoon, picture-book gouache/watercolor, or retro pixel/synthwave "
+            "cel cartoon, storybook illustration, children's picture-book gouache/watercolor, or retro pixel/synthwave "
             "when requested; not photoreal photos "
             "or UI screenshots), "
             "(3) garbled letters painted into the scene are a failure. "

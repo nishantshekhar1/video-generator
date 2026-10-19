@@ -30,10 +30,11 @@ button:disabled { opacity: 0.45; cursor: wait; }
 .app {
   height: 100%;
   display: grid;
-  grid-template-rows: 52px minmax(0, 1fr) 148px;
+  grid-template-rows: 52px auto minmax(0, 1fr) 148px;
   grid-template-columns: 260px minmax(0, 1fr) 320px;
   grid-template-areas:
     "top top top"
+    "rail rail rail"
     "side stage inspector"
     "film film film";
 }
@@ -49,6 +50,29 @@ button:disabled { opacity: 0.45; cursor: wait; }
 }
 
 .mark { font-weight: 620; letter-spacing: -0.02em; }
+
+.rail {
+  grid-area: rail;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.chip {
+  font-size: 12px;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.chip.done, .chip.skipped { border-color: #3d5c49; color: #8fbfa4; }
+.chip.running { border-color: #8a8270; color: var(--quiet); }
+.chip.failed, .chip.stopped { border-color: #6a4e52; color: var(--danger); }
 
 .grow { flex: 1; }
 
@@ -306,10 +330,11 @@ textarea { min-height: 88px; resize: vertical; }
 
 @media (max-width: 980px) {
   .app {
-    grid-template-rows: 52px auto minmax(280px, 1fr) 148px auto;
+    grid-template-rows: 52px auto auto minmax(280px, 1fr) 148px auto;
     grid-template-columns: 1fr;
     grid-template-areas:
       "top"
+      "rail"
       "side"
       "stage"
       "film"

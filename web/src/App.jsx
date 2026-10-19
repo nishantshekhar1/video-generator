@@ -219,7 +219,7 @@ export default function App() {
             <span key={name} className={`dot ${ok ? "on" : "off"}`} title={`${name}: ${ok ? "ok" : "down"}`} />
           ))}
         </span>
-        <span className="muted grow">{runId ? view.label : "New video"}</span>
+        <span className="muted grow">{runId ? stepLine(view, shots) : "New video"}</span>
         <div className="actions">
           {view.working && (
             <button className="btn" type="button" onClick={stopRun} disabled={view.job === "stopping"}>
@@ -235,6 +235,8 @@ export default function App() {
           ) : null}
         </div>
       </header>
+
+      {runId && <StageRail stages={view.status?.stages} shots={shots} />}
 
       <aside className="side">
         <div className="side-head">
@@ -277,7 +279,6 @@ export default function App() {
         {runId && !selected && (
           <div className="pad">
             <p className="muted">{detail?.status?.topic || runId}</p>
-            <StageDots stages={view.status?.stages} />
             {detail?.job?.error || detail?.status?.error ? <p className="err">{detail.job?.error || detail.status?.error}</p> : null}
           </div>
         )}
@@ -306,7 +307,6 @@ export default function App() {
       <footer className="film">
         <div className="film-head">
           <span>Stills</span>
-          {runId && <StageDots stages={view.status?.stages} />}
         </div>
         <div className="strip">
           {shots.map((shot) => {
@@ -336,16 +336,47 @@ export default function App() {
   );
 }
 
-function StageDots({ stages }) {
+function stepCount(name, shots) {
+  if (!shots.length) return "";
+  if (name === "stills") {
+    const finals = shots.filter((shot) => shot.frame_path).length;
+    const drafts = shots.filter((shot) => shot.draft_path).length;
+    const done = finals || drafts;
+    return done ? `${finals || drafts}/${shots.length}` : "";
+  }
+  if (name === "qa") {
+    const done = shots.filter((shot) => shot.qa_ok !== null && shot.qa_ok !== undefined).length;
+    return done ? `${done}/${shots.length}` : "";
+  }
+  if (name === "motion") {
+    const done = shots.filter((shot) => shot.clip_path).length;
+    return done ? `${done}/${shots.length}` : "";
+  }
+  return "";
+}
+
+function stepLine(view, shots) {
+  const name = view.status?.current_stage;
+  if (!name || name === "done") return view.label || "done";
+  const state = view.status?.stages?.[name] || view.label;
+  const count = stepCount(name, shots);
+  return [name, count, state].filter(Boolean).join(" · ");
+}
+
+function StageRail({ stages, shots }) {
   const map = stages || {};
   return (
-    <span className="dots">
+    <div className="rail">
       {STAGES.map((name) => {
         const state = map[name] || "pending";
-        const on = state === "done" || state === "running";
-        return <span key={name} className={`dot ${state === "failed" || state === "stopped" ? "off" : on ? "on" : ""}`} title={`${name}: ${state}`} />;
+        const count = stepCount(name, shots);
+        return (
+          <span key={name} className={`chip ${state}`}>
+            {name}{count ? ` ${count}` : ""} · {state}
+          </span>
+        );
       })}
-    </span>
+    </div>
   );
 }
 

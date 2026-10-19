@@ -22,7 +22,8 @@ export const STAGES = [
 export const STYLES = [
   ["sketch", "Toddler color-pencil"],
   ["classic_cartoon", "Classic cartoon"],
-  ["storybook", "Children's picture-book"],
+  ["storybook", "Storybook illustration"],
+  ["picture_book", "Children's picture-book"],
   ["retro_digital", "Retro digital"],
   ["painterly", "Painterly"],
   ["graphic", "Graphic"],

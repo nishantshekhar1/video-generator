@@ -43,7 +43,7 @@ def run(
     duration: int = typer.Option(60, help="Target duration seconds"),
     style: str = typer.Option(
         "sketch",
-        help="Style preset: sketch|classic_cartoon|storybook|retro_digital|painterly|graphic",
+        help="Style preset: sketch|classic_cartoon|storybook|picture_book|retro_digital|painterly|graphic",
     ),
     run_id: Optional[str] = typer.Option(None, help="Resume this run id"),
     no_resume: bool = typer.Option(False, help="Ignore prior stage status"),

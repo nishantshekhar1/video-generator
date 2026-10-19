@@ -41,12 +41,20 @@ _STYLE_PLANNER: dict[str, tuple[str, str]] = {
         "classic vintage cartoon / cel animation; narration stays adult/educational",
     ),
     "storybook": (
-        "VISUALS: children's picture-book plates painted in gouache and watercolor "
+        "VISUALS: storybook illustration plates painted in gouache and watercolor "
         "on warm paper, with a delicate ink line and richly painted scenery. "
         "Each shot is a narrative illustration: one clear character acting in a "
-        "storybook setting. Keep one continuous picture-book character design "
+        "storybook setting. Keep one continuous storybook character design "
         "across shots. Still show the real idea (subject + action).",
-        "picture-book gouache and watercolor illustration; narration stays adult/educational",
+        "storybook illustration, gouache and watercolor; narration stays adult/educational",
+    ),
+    "picture_book": (
+        "VISUALS: children's picture-book pages painted in gouache and watercolor "
+        "on warm paper, with a delicate ink line and a single painted scene. "
+        "Each shot is one page: one clear character acting in one place. "
+        "Keep one continuous picture-book character design across shots. "
+        "Still show the real idea (subject + action).",
+        "children's picture-book gouache and watercolor; narration stays adult/educational",
     ),
     "painterly": (
         "VISUALS: evocative painterly graphic stills with bold shapes and cinematic light. "
@@ -78,9 +86,15 @@ def _fallback_visual_hint(text: str, topic: str, style_name: str = "sketch") -> 
         )
     if style_name == "storybook":
         return (
-            f"Children's picture-book plate about {topic}: painted character acting out "
+            f"Storybook illustration about {topic}: painted character acting out "
             f"the idea behind '{cleaned}', gouache and watercolor, delicate ink line, "
             "warm cream paper, rich scenery, one focal subject, no text"
+        )
+    if style_name == "picture_book":
+        return (
+            f"Children's picture-book page about {topic}: painted character acting out "
+            f"the idea behind '{cleaned}', gouache and watercolor, delicate ink line, "
+            "warm cream paper, one scene, one focal subject, no text"
         )
     if style_name == "graphic":
         return (
@@ -126,6 +140,7 @@ def _plan_visual_hints(
                         f"{style_sys} "
                         "For each narration line, write a CONCRETE visual scene of what that line is about. "
                         "Show one character, once, in one place. "
+                        "Do not invent a new outfit, hairstyle, or art medium. "
                         "The objects and actions named in the line must be in the picture. "
                         "If the line mentions lipstick, coffee, a shop, or a person doing something, show that, "
                         "not a different metaphor. "

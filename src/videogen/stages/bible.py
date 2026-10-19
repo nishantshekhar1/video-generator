@@ -7,6 +7,7 @@ import re
 
 from videogen.config import Settings
 from videogen.models import CharacterBible, Storyboard
+from videogen.overlay import compose_shot_prompt, scene_text
 from videogen.providers.comfy import ComfyClient
 from videogen.providers.llm import OllamaLLM
 from videogen.run_store import RunStore
@@ -14,10 +15,6 @@ from videogen.run_store import RunStore
 log = logging.getLogger(__name__)
 
 
-_BODY_RULE = (
-    "Same torso width, hip width, and limb thickness in every frame. "
-    "Do not redraw the character thinner or heavier."
-)
 _PLACE = re.compile(
     r"\b(room|study|landscape|scenery|filled with|background|street|square)\b",
     re.IGNORECASE,
@@ -46,10 +43,10 @@ def _fallback_bible(topic: str, style_prefix: str) -> CharacterBible:
             "one recurring guide character",
             "same face shape and hair",
             "same outfit colors",
-            body,
             "one signature prop",
         ],
         body=body,
+        outfit=outfit,
         sheet_prompt=_sheet_prompt(style_prefix, body, outfit),
         style_prompt=(
             f"{style_prefix}. Style reference plate for a video about {topic}. "
@@ -58,26 +55,20 @@ def _fallback_bible(topic: str, style_prefix: str) -> CharacterBible:
     )
 
 
-def _identity_anchors(anchors: str) -> str:
-    parts = [part.strip() for part in anchors.split(",") if part.strip()]
-    kept = [part for part in parts if not _PLACE.search(part)]
-    return ", ".join(kept[:4])
-
-
-def _apply_anchors(prompt: str, anchors: str, body: str) -> str:
-    anchors = _identity_anchors(anchors)
-    if anchors and "Character anchors:" not in prompt:
-        needle = "Scene:"
-        line = f"Character anchors: {anchors}."
-        prompt = (
-            prompt.replace(needle, f"{line} {needle}", 1)
-            if needle in prompt
-            else f"{line} {prompt}"
+def _identity_sentence(body: str, outfit: str, anchors: list[str]) -> str:
+    parts: list[str] = []
+    kept = [anchor for anchor in anchors if anchor and not _PLACE.search(anchor)][:4]
+    if kept:
+        parts.append(", ".join(kept))
+    if outfit:
+        parts.append(outfit.rstrip("."))
+    if body:
+        parts.append(
+            f"Build: {body.rstrip('.')}. "
+            "Same torso width, hip width, and limb thickness in every frame"
         )
-    lock = f"Body lock: {body}."
-    if body and lock not in prompt:
-        prompt = f"{lock} {_BODY_RULE} {prompt}"
-    return prompt
+    text = ". ".join(parts).strip()
+    return text if text.endswith(".") else f"{text}."
 
 
 def run_bible(
@@ -109,8 +100,9 @@ def run_bible(
                         '"anchors":["5 to 7 short visual anchors"],'
                         '"style_prompt":"empty style-plate prompt"}. '
                         "Pick one body and keep it. Do not say slim in one place and plump in another. "
-                        "Anchors cover hair, face, outfit, and one prop. "
+                        "Anchors cover hair, face, outfit colors, and one prop. "
                         "Do not put a room, a landscape, or a list of extra objects in the anchors. "
+                        "Do not describe a different art medium from the style you were given. "
                         "No readable text, logos, or photorealism."
                     ),
                 },
@@ -133,10 +125,8 @@ def run_bible(
         if len(body.split()) >= 4:
             bible.body = body[:240]
         if outfit:
-            bible.sheet_prompt = _sheet_prompt(board.style_prefix, bible.body, outfit[:240])
-        style = str(data.get("style_prompt") or "").strip()
-        if style:
-            bible.style_prompt = f"{board.style_prefix}. {style}"[:700]
+            bible.outfit = outfit[:240]
+            bible.sheet_prompt = _sheet_prompt(board.style_prefix, bible.body, bible.outfit)
     except Exception as e:  # noqa: BLE001
         log.warning("Bible planning failed, using fallbacks: %s", e)
 
@@ -164,9 +154,13 @@ def run_bible(
         )
     bible.sheet_path = str(sheet_path.relative_to(store.root))
     bible.style_path = str(style_path.relative_to(store.root))
-    anchor_line = ", ".join(bible.anchors)
+    bible.identity = _identity_sentence(bible.body, bible.outfit, bible.anchors)
     for shot in board.shots:
-        shot.visual_prompt = _apply_anchors(shot.visual_prompt, anchor_line, bible.body)
+        shot.visual_prompt = compose_shot_prompt(
+            board.style_prefix,
+            bible.identity,
+            scene_text(shot.visual_prompt),
+        )
     board.bible = bible
     store.write_json("storyboard.json", board)
     return board

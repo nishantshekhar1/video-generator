@@ -15,8 +15,8 @@ _SPACE_NOTE = (
 )
 # A wide frame was being painted as two copies of the same page.
 _ONCE = (
-    "One children's picture-book page filling the whole frame. "
-    "One scene only. Not a diptych, not a two-page spread, not a second copy of the same picture."
+    "One scene filling the whole frame. "
+    "Not a diptych, not a two-page spread, not a second copy of the same picture."
 )
 _SETTING = re.compile(
     r"\b(room|study|landscape|scenery|filled with|background|street|square)\b",
@@ -91,6 +91,41 @@ def single_character(prompt: str) -> str:
     if _ONCE not in prompt:
         prompt = f"{_ONCE} {prompt}"
     return prompt
+
+
+def scene_text(prompt: str) -> str:
+    """The action and place, without the locked style and character sentences."""
+    match = re.search(r"Scene:\s*(.+)", prompt, re.DOTALL)
+    text = match.group(1) if match else prompt
+    text = re.split(
+        r"(?:Storybook illustration still|Children's picture-book still|"
+        r"Whimsical toddler|Classic vintage|Retro digital|Still that illustrates)",
+        text,
+        maxsplit=1,
+    )[0]
+    return " ".join(text.split())[:500]
+
+
+def compose_shot_prompt(style: str, identity: str, scene: str) -> str:
+    """One verbatim style phrase and one verbatim character sentence, then the new scene."""
+    parts = []
+    if style:
+        parts.append(f"Style, use these words exactly: {style}.")
+    if identity:
+        parts.append(
+            f"The same character in every frame: {identity}. "
+            "Keep this face, hair, outfit, and body. Change only the action and the place."
+        )
+    parts.append(f"Scene: {scene}.")
+    return " ".join(parts)
+
+
+def still_seed(run_id: str, shot_id: str, bump: int = 0) -> int:
+    """Same shot keeps the same noise, so a retry is a choice rather than a new person."""
+    import zlib
+
+    base = zlib.adler32(f"{run_id}:{shot_id}".encode()) % (2**31 - 1)
+    return base + bump
 
 
 def image_prompt(shot: Shot) -> str:

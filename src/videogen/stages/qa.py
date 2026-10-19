@@ -5,7 +5,7 @@ import re
 
 from videogen.config import Settings
 from videogen.models import Storyboard
-from videogen.overlay import apply_overlay, image_prompt
+from videogen.overlay import apply_overlay, compose_shot_prompt, image_prompt, still_seed
 from videogen.providers.comfy import ComfyClient
 from videogen.providers.vision import OllamaVision
 from videogen.run_store import RunStore
@@ -51,6 +51,7 @@ def run_qa(
             log.warning("Vision QA failed for %s: %s", shot.id, e)
             shot.qa_ok = True
             shot.qa_notes = f"vision_error:{e}"
+            store.write_json("storyboard.json", board)
             continue
 
         shot.qa_ok = bool(result.get("ok"))
@@ -61,12 +62,17 @@ def run_qa(
             and result.get("retry_prompt")
         ):
             retry_prompt = str(result["retry_prompt"])
-            full = f"{board.style_prefix}. {retry_prompt}"
-            shot.visual_prompt = full
+            identity = board.bible.identity if board.bible else ""
+            shot.visual_prompt = compose_shot_prompt(
+                board.style_prefix,
+                identity,
+                retry_prompt,
+            )
             log.info("Retrying still %s after vision reject", shot.id)
             comfy.generate_still(
                 image_prompt(shot),
                 frame,
+                seed=still_seed(store.run_id, shot.id, bump=17),
                 quality="final",
                 reference=sheet,
                 filename_prefix=f"videogen_{store.run_id}_{shot.id}_retry",
@@ -86,5 +92,6 @@ def run_qa(
             except Exception as e:  # noqa: BLE001
                 shot.qa_notes += f" | retry_vision_error:{e}"
                 shot.qa_ok = True
+        store.write_json("storyboard.json", board)
     store.write_json("storyboard.json", board)
     return board
