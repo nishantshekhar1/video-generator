@@ -79,7 +79,8 @@ pipeline:
     graphic: "flat graphic poster illustration, bold color blocks, editorial design"
     retro_digital: "retro digital pixel art, 8-bit and 16-bit video game asset style, chunky visible pixels, limited color palette, crisp sprite silhouettes, synthwave neon aesthetics, magenta and cyan glow, dark grid or sunset gradient backdrop, arcade game key art, no photorealism, no modern UI chrome"
     classic_cartoon: "classic American theatrical cartoon style, 1930s-1950s rubber-hose animation look, clean ink outlines, flat cel-shaded colors, squash and stretch poses, expressive eyes and gloves-era charm, painted sky backdrop, vintage animation still, whimsical and lively, no photorealism, no 3D CGI, no modern anime"
-    storybook: "children's picture-book illustration, gouache and watercolor on warm cream paper, delicate ink outlines, soft painted color, rich storybook scenery, gentle lighting, narrative picture-book plate, whimsical but grounded, one character in the scene, no photorealism, no cel animation, no pixel art, no 3D CGI"
+    storybook: "storybook illustration, narrative picture-book plate, gouache and watercolor on warm cream paper, delicate ink outlines, soft painted color, rich scenery, gentle lighting, whimsical but grounded characters, no photorealism, no cel animation, no pixel art, no 3D CGI"
+    picture_book: "children's picture-book illustration, one painted page, gouache and watercolor on warm cream paper, delicate ink outlines, soft painted color, rich storybook scenery, gentle lighting, whimsical but grounded, one character in one scene, not a two-page spread, no photorealism, no cel animation, no pixel art, no 3D CGI"
   vision_retry_once: true
   camera_fps: 24
   output_width: 1920

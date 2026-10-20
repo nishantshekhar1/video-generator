@@ -47,9 +47,16 @@ def _continuity(preset: str, topic: str) -> tuple[str, str]:
         )
     if preset == "storybook":
         return (
-            f"Keep one consistent picture-book character for topic '{topic}' "
+            f"Keep one consistent storybook character for topic '{topic}' "
             "across frames; same ink line, painted colors, and proportions when it returns.",
             "Storybook illustration still that illustrates this mature spoken line "
+            "(do not write the words on the image)",
+        )
+    if preset == "picture_book":
+        return (
+            f"Keep one consistent picture-book character for topic '{topic}' "
+            "across frames; same ink line, painted colors, and proportions when it returns.",
+            "Children's picture-book still that illustrates this mature spoken line "
             "(do not write the words on the image)",
         )
     if preset == "sketch":
@@ -195,6 +202,8 @@ def _plan_one_scene(
                         "Show one character, once, doing one action in one place. "
                         "Do not describe a second copy, a before-and-after pair, or two panels. "
                         "If the words cover more than one moment, pick the single clearest moment. "
+                        "Do not describe hair, clothes, body, or the drawing medium. "
+                        "Those stay locked. Describe only the action, the named objects, and the place. "
                         "The picture must show the objects and action the words name. "
                         "If the words mention lipstick, coffee, a receipt, or a shop, those are in the frame. "
                         "Do not invent a different subject. "

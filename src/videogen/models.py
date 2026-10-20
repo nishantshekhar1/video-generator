@@ -122,6 +122,8 @@ class Shot(BaseModel):
 class CharacterBible(BaseModel):
     anchors: list[str] = Field(default_factory=list)
     body: str = ""
+    outfit: str = ""
+    identity: str = ""
     sheet_prompt: str = ""
     style_prompt: str = ""
     sheet_path: str = ""

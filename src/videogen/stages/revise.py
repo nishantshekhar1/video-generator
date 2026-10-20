@@ -6,7 +6,7 @@ import logging
 
 from videogen.config import Settings
 from videogen.models import NarrationManifest, Script, StageName, StageStatus, Storyboard
-from videogen.overlay import apply_overlay, image_prompt
+from videogen.overlay import apply_overlay, image_prompt, still_seed
 from videogen.providers.comfy import ComfyClient
 from videogen.providers.tts import TTSProvider
 from videogen.run_store import RunStore
@@ -120,6 +120,7 @@ def revise_shot(
         comfy.generate_still(
             image_prompt(shot),
             dest,
+            seed=still_seed(store.run_id, shot.id, bump=3),
             quality=quality,
             reference=reference,
             filename_prefix=f"videogen_{store.run_id}_{shot.id}_edit",

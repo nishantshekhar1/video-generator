@@ -23,8 +23,12 @@ from videogen.stages.revise import revise_shot
 app = FastAPI(title="Local Video Studio")
 settings = get_settings()
 static_dir = ROOT / "static"
+dist_dir = ROOT / "web" / "dist"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+assets_dir = dist_dir / "assets"
+if assets_dir.exists():
+    app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 _jobs: dict[str, dict[str, Any]] = {}
 _lock = threading.Lock()
@@ -64,11 +68,14 @@ def _tts_provider() -> TTSProvider:
     return _tts
 
 
-@app.get("/", response_class=HTMLResponse)
-def index() -> HTMLResponse:
+@app.get("/", response_model=None)
+def index() -> FileResponse | HTMLResponse:
+    built = dist_dir / "index.html"
+    if built.exists():
+        return FileResponse(built, headers={"Cache-Control": "no-cache"})
     index_path = static_dir / "index.html"
     if not index_path.exists():
-        return HTMLResponse("<h1>Missing static/index.html</h1>", status_code=500)
+        return HTMLResponse("<h1>Missing web/dist. Run npm run build in web/.</h1>", status_code=500)
     return HTMLResponse(index_path.read_text(encoding="utf-8"))
 
 

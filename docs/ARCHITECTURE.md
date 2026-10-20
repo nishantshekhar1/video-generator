@@ -25,7 +25,7 @@ Never load `qwen3.6:35b` and Flux on the same card at once. Stages are sequentia
 topic → research → script → narration → storyboard → bible → stills → qa → motion → assemble
 ```
 
-The character sheet is a full-body front-and-side proportion plate. Every shot starts with that same body sentence, and finals are edited from the plate so the torso width cannot drift while the clothes stay put. A shot names that person once and names one place. Rooms and extra props stay off the shot prompt, because listing them made the image model paint a second copy of the character.
+The character sheet is a full-body front-and-side proportion plate. Every shot copies one identity sentence and one style phrase verbatim, and only the action and place change. That is the consistency method that works on the illustrated models we sample: a fixed seed does not keep a face once the scene changes, and chaining each frame from the previous one drifts. Flux Redux and PuLID can pin a reference photo, but those Flux Dev weights are non-commercial, so a published run does not call them. A wide frame that comes back as two copies of the same page is folded down to one page; a front-and-side character sheet is left as two views.
 
 On-image words are not painted by Flux. When a shot needs a sign, label, or title, `overlay_text` is typeset with DejaVu Sans after the still. The review screen shows the spoken line under each frame and can rewrite that line, the overlay, and the image prompt, then regenerate the still and the sentence audio.
 
@@ -38,7 +38,7 @@ The web UI can pause after draft stills (`await_approval`). The stills-and-voice
 | script | `stages/script.py` | brief + research | `script.json` (+ per-sentence `visual_hint`) |
 | narration | `stages/narration.py` | script sentences | `audio/*.wav`, durations |
 | storyboard | `stages/storyboard.py` | script + durations + still count | `storyboard.json` (one held picture per group) |
-| bible | `stages/bible.py` | storyboard | character sheet, style plate, anchors |
+| bible | `stages/bible.py` | storyboard | character sheet, style plate, one identity sentence copied onto every shot |
 | stills | `stages/stills.py` | storyboard + sheet | draft frames, then final frames |
 | qa | `stages/qa.py` | frames + prompts | maybe regenerated frames |
 | motion | `stages/motion.py` | frames + camera | `clips/*.mp4` |
@@ -66,8 +66,10 @@ watermarks / UI text). Presets supply the look:
   script/TTS stay mature adult educational voiceover.
 - `classic_cartoon` — vintage theatrical / cel animation (rubber-hose charm, ink
   outlines, flat colors, squash-and-stretch). Same mature narration split.
-- `storybook` — children's picture-book plates (gouache and watercolor on warm
+- `storybook` — storybook illustration plates (gouache and watercolor on warm
   paper, delicate ink line, painted scenery). Same mature narration split.
+- `picture_book` — children's picture-book pages, one painted scene per still.
+  Same mature narration split.
 - `retro_digital` — 8-bit/16-bit pixel-art game assets + synthwave neon (magenta/cyan
   glow, limited palette, arcade key art). Same mature narration split.
 - `painterly` / `graphic` — optional alternate looks from UI/CLI
@@ -83,7 +85,7 @@ Visual planner (`script._STYLE_PLANNER`) and storyboard sync lines are style-awa
 - `videogen.providers.tts.TTSProvider` — Kokoro or espeak; sentence-level WAV.
 - `videogen.providers.research.WebResearcher` — DuckDuckGo + trafilatura extract.
 - `videogen.pipeline.Pipeline` — ordered stages, health checks, resume from status.
-- `videogen.cli` / `videogen.webapp` — CLI and FastAPI UI over the same pipeline. A recent run can be deleted from the list; that removes only its `runs/{id}/` folder, and a run that is still working is left in place. Stop ends the run in the current stage: ComfyUI is interrupted, and an ffmpeg encode is killed. Resume continues from the last finished stage.
+- `videogen.cli` / `videogen.webapp` — CLI and FastAPI API over the same pipeline. The screen is a React app in `web/` (Vite build served from `web/dist`). It follows a simple editor layout: projects on the left, the picture in the center, the selected still’s text and prompt on the right, and a filmstrip along the bottom. A rail lists every stage and its state. Stills, picture check, and motion also show how many items in that step are finished. A recent run can be deleted from the list; that removes only its `runs/{id}/` folder, and a run that is still working is left in place. Stop ends the run in the current stage: ComfyUI is interrupted, and an ffmpeg encode is killed. Resume continues from the last finished stage.
   `videogen serve` binds `0.0.0.0:7860` by default so other devices on the LAN can open the UI.
   Ollama and ComfyUI stay on localhost; only the studio UI is LAN-exposed.
 

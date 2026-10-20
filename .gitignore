@@ -8,3 +8,4 @@ __pycache__/
 runs/
 models/
 *.partial
+web/node_modules/
